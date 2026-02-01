@@ -1,11 +1,57 @@
+"use client";
+
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { loginEstate } from "@/lib/api/estate"; 
+import type { LoginEstatePayload } from "@/lib/api/estate";
 
 export default function SignForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [formData, setFormData] = useState<LoginEstatePayload>({
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      setError("Email and password are required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await loginEstate(formData); // ✅ use estate.ts API
+      const { token, estate } = response.data;
+
+      // ✅ Store auth data safely
+      localStorage.setItem("estateToken", token);
+      localStorage.setItem("estate", JSON.stringify(estate));
+
+      // ✅ Redirect to dashboard after successful login
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to login. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="w-full min-h-[544px] max-w-[512px] sm:min-h-[692px] flex justify-center items-center bg-[#2C2C2C] rounded-[12px] px-[54px] sm:px-[64px] md:px-[40px] lg:px-0">
@@ -26,6 +72,7 @@ export default function SignForm() {
 
         {/* Form */}
         <form className="space-y-[16px] sm:space-y-[16px] md:space-y-[20px] w-full flex flex-col">
+
           {/* Email */}
           <div className="w-full max-w-full sm:max-w-[426px]">
             <div className="pb-[8px] sm:pb-[8px] md:pb-[10px] text-[#FFFFFF] text-[12px] xs:text-[13px] sm:text-[14px]">
@@ -40,6 +87,9 @@ export default function SignForm() {
               />
               <input
                 type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="Enter Email Address"
                 className="w-full h-[40px] xs:h-[42px] sm:h-[44px] xs:pl-[38px] sm:pl-[41px] bg-transparent text-white border border-gray-600 rounded-[8px] text-[12px] xs:text-[13px] sm:text-[14px] focus:border-[#1D61E7] outline-none indent-[38px]"
               />
@@ -60,6 +110,9 @@ export default function SignForm() {
               />
               <input
                 type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
                 placeholder="Enter Password"
                 className="w-full h-[40px] xs:h-[42px] sm:h-[44px]  xs:pl-[38px] sm:pl-[41px]  bg-[#3D3D3D] text-white border border-gray-600 rounded-[8px] text-[12px] xs:text-[13px] sm:text-[14px] focus:border-[#1D61E7] outline-none indent-[38px]"
               />
@@ -77,6 +130,11 @@ export default function SignForm() {
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <p className="text-[#FF4D4D] text-[13px] text-center">{error}</p>
+          )}
+
           {/* Remember / Forgot */}
           <div className="w-full flex flex-row justify-between items-center text-[11px] xs:text-[12px] sm:text-[13px] mt-[-4px] sm:mt-[-6px] md:mt-[-10px] gap-2 text-center">
             <label className="flex items-center text-[#D1D1D1]">
@@ -93,29 +151,20 @@ export default function SignForm() {
             </a>
           </div>
 
+          {/* Buttons */}
           <div className="w-full space-y-[20px] sm:space-y-[35px] mx-auto mt-[20px]">
-
             <Button
               type="button"
-              onClick={() => router.push("/dashboard")}
-              className="
-              max-w-full sm:max-w-[465px] 
-              w-full
-              h-[42px] xs:h-[44px] sm:h-[46px]
-              bg-[#1D61E7]
-              text-[#FFFFFF]
-              text-[13px] xs:text-[14px] sm:text-[15px]
-              rounded-[10px]
-              hover:bg-[#1548b5]
-            "
+              onClick={handleLogin}
+              disabled={loading}
+              className="max-w-full sm:max-w-[465px] w-full h-[42px] xs:h-[44px] sm:h-[46px] bg-[#1D61E7] text-white text-[13px] xs:text-[14px] sm:text-[15px] rounded-[10px] hover:bg-[#1548b5]"
             >
-              Sign In
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
 
-            {/* Create Account */}
             <Button
               type="button"
-              onClick={() => router.push("/signup")}
+              onClick={() => router.push("/auth/register")}
               className="text-[12px] xs:text-[13px] sm:text-[14px] flex flex-col justify-center items-center text-[#FFFFFF] hover:underline bg-transparent border-none p-0 mx-auto"
             >
               Create Account

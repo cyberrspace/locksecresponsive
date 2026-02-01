@@ -1,35 +1,49 @@
 "use client";
-import { useRouter } from "next/navigation";
+
+import { useRouter, useSearchParams } from "next/navigation";
 import BackButton from "../common/BackButton";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { Button } from "../ui/button";
 import { useState } from "react";
 
+import { resendVerificationCode } from "@/lib/api/estate";
+import { getApiErrorMessage } from "@/lib/api/handleApiError";
+
 export default function ResetForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ✅ DYNAMIC EMAIL FROM URL
+  const email = searchParams.get("email");
+
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
+
   const [errors, setErrors] = useState({
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ""
+        [name]: "",
       }));
     }
   };
@@ -37,7 +51,7 @@ export default function ResetForm() {
   const validateForm = () => {
     const newErrors = {
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
     };
 
     if (!formData.password) {
@@ -56,24 +70,44 @@ export default function ResetForm() {
     return !newErrors.password && !newErrors.confirmPassword;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  /* =========================
+     RESEND VERIFICATION CODE
+  ========================= */
+  const handleResendCode = async () => {
+    if (!email) {
+      setApiError("Email is missing. Please restart the process.");
+      return;
+    }
 
-    if (validateForm()) {
-      // API call to reset the password
-      console.log("Password reset form submitted:", formData);
+    try {
+      setLoading(true);
+      setApiError("");
 
-      //  success page or login page
-      router.push("/dashboard");
+      await resendVerificationCode({ email });
+    } catch (err: unknown) {
+      setApiError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      setApiError("");
+
+      // 🔒 Reset password API will go here
+
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setApiError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,8 +118,10 @@ export default function ResetForm() {
       </div>
 
       {/* Form Card */}
-      <form onSubmit={handleSubmit} className="w-full max-w-full sm:max-w-[90%] md:max-w-[612px] bg-[#2C2C2C] rounded-[12px] py-[16px] sm:py-[10px] px-[16px] sm:px-[20px] md:px-[32px] flex flex-col items-center text-center space-y-[22px] sm:space-y-[21px] md:space-y-[33px]">
-
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-full sm:max-w-[90%] md:max-w-[612px] bg-[#2C2C2C] rounded-[12px] py-[16px] sm:py-[10px] px-[16px] sm:px-[20px] md:px-[32px] flex flex-col items-center text-center space-y-[22px] sm:space-y-[21px] md:space-y-[33px]"
+      >
         {/* Title */}
         <h1 className="text-[32px] xs:text-[36px] sm:text-[42px] md:text-[26px] lg:text-[30px] font-bold text-[#F5F5F5] leading-tight pt-[10px]">
           Reset password
@@ -96,129 +132,94 @@ export default function ResetForm() {
           Create a new password
         </p>
 
+        {/* API Error */}
+        {apiError && (
+          <p className="text-[#FF4D4D] text-[13px]">{apiError}</p>
+        )}
+
         {/* New Password Input */}
         <div className="w-full flex justify-center items-center">
-          <div className="w-full max-w-[426px] sm:max-w-[426px] text-left">
-            <label
-              htmlFor="password"
-              className="block mb-[4px] sm:mb-[4px] text-[#BDBDBD] text-[12px] xs:text-[13px] sm:text-[14px]"
-            >
+          <div className="w-full max-w-[426px] text-left">
+            <label className="block mb-[4px] text-[#BDBDBD] text-[14px]">
               New Password
             </label>
 
-            <div className="relative w-full flex justify-center">
-              <Lock
-                className="absolute left-[16px] xs:left-[18px] sm:left-[20px] top-1/2 -translate-y-1/2 text-[#BDBDBD] pointer-events-none"
-                width={14}
-                height={14}
-                style={{ width: 'clamp(14px, 4vw, 16px)', height: 'clamp(14px, 4vw, 16px)' }}
-              />
+            <div className="relative">
+              <Lock className="absolute left-[16px] top-1/2 -translate-y-1/2 text-[#BDBDBD]" />
               <input
-                id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="New password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="
-                  w-full max-w-[426px]
-                  h-[35px] xs:h-[37px] sm:h-[39px]
-                  bg-[#2C2C2C]
-                  border-[0.89px] border-[#515151]
-                  rounded-[5.34px]
-                  py-[8px] xs:py-[10.68px]
-                  pl-[40px] xs:pl-[42px] sm:pl-[44px]
-                  pr-[40px]
-                  text-[#BDBDBD] placeholder:text-[#BDBDBD]
-                  text-[14px] xs:text-[16px]
-                  outline-none focus:border-[#1D61E7]
-                  transition
-                "
+                className="w-full h-[39px] bg-[#2C2C2C] border border-[#515151] rounded pl-[44px] pr-[40px] text-[#BDBDBD]"
               />
               <button
                 type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute right-[8px] xs:right-3 sm:right-[12px] top-1/2 -translate-y-1/2 text-[#FFFFFF] bg-transparent border-none cursor-pointer"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
               >
-                {showPassword ? (
-                  <EyeOff width={16} height={16} style={{ width: 'clamp(16px, 4vw, 18px)', height: 'clamp(16px, 4vw, 18px)' }} />
-                ) : (
-                  <Eye width={16} height={16} style={{ width: 'clamp(16px, 4vw, 18px)', height: 'clamp(16px, 4vw, 18px)' }} />
-                )}
+                {showPassword ? <EyeOff /> : <Eye />}
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-500 text-[12px] mt-1">{errors.password}</p>
+              <p className="text-red-500 text-[12px] mt-1">
+                {errors.password}
+              </p>
             )}
           </div>
         </div>
 
         {/* Confirm Password Input */}
         <div className="w-full flex justify-center items-center">
-          <div className="w-full max-w-[426px] sm:max-w-[426px] text-left">
-            <label
-              htmlFor="confirmPassword"
-              className="block mb-[4px] sm:mb-[4px] text-[#BDBDBD] text-[12px] xs:text-[13px] sm:text-[14px]"
-            >
+          <div className="w-full max-w-[426px] text-left">
+            <label className="block mb-[4px] text-[#BDBDBD] text-[14px]">
               Re-enter Password
             </label>
 
-            <div className="relative w-full flex justify-center">
-              <Lock
-                className="absolute left-[16px] xs:left-[18px] sm:left-[20px] top-1/2 -translate-y-1/2 text-[#BDBDBD] pointer-events-none"
-                width={14}
-                height={14}
-                style={{ width: 'clamp(14px, 4vw, 16px)', height: 'clamp(14px, 4vw, 16px)' }}
-              />
+            <div className="relative">
+              <Lock className="absolute left-[16px] top-1/2 -translate-y-1/2 text-[#BDBDBD]" />
               <input
-                id="confirmPassword"
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className="
-                  w-full max-w-[426px]
-                  h-[35px] xs:h-[37px] sm:h-[39px]
-                  bg-[#2C2C2C]
-                  border-[0.89px] border-[#515151]
-                  rounded-[5.34px]
-                  py-[8px] xs:py-[10.68px]
-                  pl-[40px] xs:pl-[42px] sm:pl-[44px]
-                  pr-[40px]
-                  text-[#BDBDBD] placeholder:text-[#BDBDBD]
-                  text-[14px] xs:text-[16px]
-                  outline-none focus:border-[#1D61E7]
-                  transition
-                "
+                className="w-full h-[39px] bg-[#2C2C2C] border border-[#515151] rounded pl-[44px] pr-[40px] text-[#BDBDBD]"
               />
               <button
                 type="button"
-                onClick={toggleConfirmPasswordVisibility}
-                className="absolute right-[8px] xs:right-3 sm:right-[12px] top-1/2 -translate-y-1/2 text-[#FFFFFF] bg-transparent border-none cursor-pointer"
+                onClick={() => setShowConfirmPassword((p) => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
               >
-                {showConfirmPassword ? (
-                  <EyeOff width={16} height={16} style={{ width: 'clamp(16px, 4vw, 18px)', height: 'clamp(16px, 4vw, 18px)' }} />
-                ) : (
-                  <Eye width={16} height={16} style={{ width: 'clamp(16px, 4vw, 18px)', height: 'clamp(16px, 4vw, 18px)' }} />
-                )}
+                {showConfirmPassword ? <EyeOff /> : <Eye />}
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className="text-[#FF4D4D] text-[12px] mt-1">{errors.confirmPassword}</p>
+              <p className="text-red-500 text-[12px] mt-1">
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
         </div>
 
-        <div className="w-full max-w-full sm:max-w-[426px] h-[40px] mt-[20px] mb-[20px]">
+        {/* Actions */}
+        <div className="w-full max-w-[426px] space-y-3">
           <Button
             type="submit"
-            className="w-full max-w-[426px] text-[#FFFFFF] bg-[#102DC8] h-[38px] xs:h-[40px] sm:h-[43px] text-[14px] xs:text-[16px] rounded-[10px] hover:bg-[#0d24a6] transition-colors"
+            disabled={loading}
+            className="w-full bg-[#102DC8] text-white h-[40px] rounded-[10px]"
           >
-            Reset Password
+            {loading ? "Processing..." : "Reset Password"}
           </Button>
-        </div>
 
+          <button
+            type="button"
+            onClick={handleResendCode}
+            disabled={loading}
+            className="text-[#1D61E7] text-[14px] underline"
+          >
+            Resend verification code
+          </button>
+        </div>
       </form>
     </main>
   );

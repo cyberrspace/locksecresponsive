@@ -1,8 +1,10 @@
 "use client";
 
+
 import ContentWrapper from "../components/common/ContentWrapper";
 import SignNav from "../components/NavOne/SignNav";
-import SignForm from "../components/SignForm/SignForm";
+import SignForm from "@/components/SignForm/SignForm";
+// import SignForm from "../components/SignForm/SignForm";
 
 export default function Home() {
   return (
@@ -35,7 +37,7 @@ export default function Home() {
             md:max-w-[600px]   
            
           ">
-          <SignForm />
+        <SignForm/>
         </div>
       </main>
     </ContentWrapper>
