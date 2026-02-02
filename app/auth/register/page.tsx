@@ -1,5 +1,5 @@
 import ContentWrapper from "@/components/common/ContentWrapper";
-import EstateForm from "@/components/EstateForm/EstateForm";
+import EstateForm from "@/components/EstateForm";
 import SignNav from "@/components/NavOne/SignNav";
 
 

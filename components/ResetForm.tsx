@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import BackButton from "../common/BackButton";
+import BackButton from "./common/BackButton";
 import { Eye, EyeOff, Lock } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "./ui/button";
 import { useState } from "react";
 
 import { resendVerificationCode } from "@/lib/api/estate";
@@ -224,3 +224,5 @@ export default function ResetForm() {
     </main>
   );
 }
+
+export { };
